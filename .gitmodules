@@ -1,0 +1,3 @@
+[submodule "LoginScreen"]
+	path = LoginScreen
+	url = https://github.com/skaarfundgandr/LoginScreen.git
