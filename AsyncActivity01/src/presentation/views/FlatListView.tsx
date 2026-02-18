@@ -19,7 +19,7 @@ export function FlatListView() {
 
   return (
     <View className="w-full bg-white p-4">
-      <Header />
+      <Header className="h-20 justify-center bg-blue-400 p-4 shadow-md" />
       <TextInput
         className="mb-4 mt-4 h-20 w-full border-2 border-black p-4"
         placeholder="Enter Name"

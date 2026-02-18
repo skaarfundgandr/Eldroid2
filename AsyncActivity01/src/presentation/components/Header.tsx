@@ -1,9 +1,11 @@
 import { View, Text } from 'react-native';
 
-export function Header() {
+export function Header({ className }: { className?: string }) {
   return (
-    <View className='bg-blue-400 p-4 h-20 shadow-md justify-center'>
-      <Text className='tracking-wide select-none text-center text-2xl text-white font-bold'>Junmarc P. Manos</Text>
+    <View className={`${className}`}>
+      <Text className="select-none text-center text-2xl font-bold tracking-wide text-white">
+        Junmarc P. Manos
+      </Text>
     </View>
   );
 }
