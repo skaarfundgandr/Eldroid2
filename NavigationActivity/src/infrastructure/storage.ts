@@ -1,88 +1,27 @@
-import { Platform } from 'react-native';
 import { User } from '@/domain/user';
 
-/**
- * Robust lazy accessor for AsyncStorage to prevent "runtime not ready" errors.
- */
-const getAsyncStorage = () => {
-  try {
-    const AsyncStorage =
-      require('@react-native-async-storage/async-storage').default ||
-      require('@react-native-async-storage/async-storage');
-    return AsyncStorage;
-  } catch (e) {
-    console.warn('AsyncStorage module lookup failed');
-    return null;
-  }
-};
+type AsyncStorageInstance = (typeof import('@react-native-async-storage/async-storage'))['default'];
 
-const storage = {
-  getItem: async (key: string) => {
-    const as = getAsyncStorage();
-    if (as && as.getItem) {
-      try {
-        return await as.getItem(key);
-      } catch (e) {
-        console.error('AsyncStorage.getItem failed', e);
-      }
-    }
-    // Fallback to localStorage on Web
-    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-      return localStorage.getItem(key);
-    }
-    return null;
-  },
-  setItem: async (key: string, value: string) => {
-    const as = getAsyncStorage();
-    if (as && as.setItem) {
-      try {
-        await as.setItem(key, value);
-        return;
-      } catch (e) {
-        console.error('AsyncStorage.setItem failed', e);
-      }
-    }
-    // Fallback to localStorage on Web
-    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-      localStorage.setItem(key, value);
-      return;
-    }
-  },
-  getAllKeys: async () => {
-    const as = getAsyncStorage();
-    if (as && as.getAllKeys) {
-      try {
-        return await as.getAllKeys();
-      } catch (e) {
-        console.error('AsyncStorage.getAllKeys failed', e);
-      }
-    }
-    // Fallback to localStorage on Web
-    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-      return Object.keys(localStorage);
-    }
-    return [];
-  },
-  clear: async () => {
-    const as = getAsyncStorage();
-    if (as && as.clear) {
-      try {
-        await as.clear();
-        return;
-      } catch (e) {
-        console.error('AsyncStorage.clear failed', e);
-      }
-    }
-    // Fallback to localStorage on Web
-    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-      localStorage.clear();
-      return;
-    }
-  },
+let storagePromise: Promise<AsyncStorageInstance> | null = null;
+
+const getStorage = async (): Promise<AsyncStorageInstance> => {
+  if (!storagePromise) {
+    storagePromise = import('@react-native-async-storage/async-storage')
+      .then((module) => module.default)
+      .catch((error) => {
+        storagePromise = null;
+        throw new Error(
+          `Failed to load AsyncStorage native module. Rebuild the Android app after native dependency changes. Original error: ${String(error)}`
+        );
+      });
+  }
+
+  return storagePromise;
 };
 
 export const initializeStorage = async () => {
   try {
+    const storage = await getStorage();
     const defaultEmail = 'mobile@uc.com';
     const existingUser = await storage.getItem(defaultEmail);
     if (!existingUser) {
@@ -104,6 +43,7 @@ export const addUser = async (user: User) => {
   }
 
   try {
+    const storage = await getStorage();
     const existingUser = await storage.getItem(user.email);
     if (existingUser) {
       throw new Error('User already exists');
@@ -117,6 +57,7 @@ export const addUser = async (user: User) => {
 
 export const getUsers = async (): Promise<User[]> => {
   try {
+    const storage = await getStorage();
     const keys = await storage.getAllKeys();
     const userKeys = keys.filter((key: string) => key.includes('@') && key.includes('.'));
 
@@ -132,13 +73,22 @@ export const getUsers = async (): Promise<User[]> => {
   }
 };
 
+export const getUserByEmail = async (email: string): Promise<User | null> => {
+  try {
+    const storage = await getStorage();
+    const storedUserJson = await storage.getItem(email);
+    return storedUserJson ? (JSON.parse(storedUserJson) as User) : null;
+  } catch (error) {
+    console.error('Failed to fetch user from storage:', error);
+    throw error;
+  }
+};
+
 export const clearStorage = async () => {
   try {
+    const storage = await getStorage();
     await storage.clear();
   } catch (error) {
     console.error('Failed to clear storage:', error);
   }
 };
-
-// Export the storage object for auth.ts
-export const userStorage = storage;
