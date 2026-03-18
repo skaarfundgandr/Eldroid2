@@ -18,7 +18,7 @@ export function LoginCard() {
     const success = await login({ email, password });
 
     if (success) {
-      navigation.navigate('FlatList');
+      navigation.navigate('FlatList' as never);
     } else {
       Alert.alert('Error', 'Invalid credentials');
     }

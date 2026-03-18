@@ -27,7 +27,7 @@ export function Header({ isFlatList }: { isFlatList?: boolean }) {
               navigation.navigate('AddUser' as never);
             }}
             className="rounded bg-white/20 p-2">
-            <Text className="font-bold text-white">Add User</Text>
+            <Text className="font-bold text-white text-xl tracking-wide">Add</Text>
           </TouchableOpacity>
         )}
       </View>

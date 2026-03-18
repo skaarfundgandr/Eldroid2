@@ -1,94 +1,95 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '@/domain/user';
 
-type AsyncStorageInstance = (typeof import('@react-native-async-storage/async-storage'))['default'];
+class Storage {
+  private static instance: Storage;
 
-let storagePromise: Promise<AsyncStorageInstance> | null = null;
-
-const getStorage = async (): Promise<AsyncStorageInstance> => {
-  if (!storagePromise) {
-    storagePromise = import('@react-native-async-storage/async-storage')
-      .then((module) => module.default)
-      .catch((error) => {
-        storagePromise = null;
-        throw new Error(
-          `Failed to load AsyncStorage native module. Rebuild the Android app after native dependency changes. Original error: ${String(error)}`
-        );
-      });
+  private constructor() {
+    this.initialize().then(() => console.log('Storage initialized'));
   }
 
-  return storagePromise;
-};
-
-export const initializeStorage = async () => {
-  try {
-    const storage = await getStorage();
-    const defaultEmail = 'mobile@uc.com';
-    const existingUser = await storage.getItem(defaultEmail);
-    if (!existingUser) {
-      const defaultUser: User = {
-        email: defaultEmail,
-        password: 'hello123!',
-      };
-      await storage.setItem(defaultEmail, JSON.stringify(defaultUser));
+  public static getInstance(): Storage {
+    if (!Storage.instance) {
+      Storage.instance = new Storage();
     }
-  } catch (error) {
-    console.error('Failed to initialize storage:', error);
-  }
-};
-
-export const addUser = async (user: User) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(user.email)) {
-    throw new Error('Invalid email format');
+    return Storage.instance;
   }
 
-  try {
-    const storage = await getStorage();
-    const existingUser = await storage.getItem(user.email);
-    if (existingUser) {
-      throw new Error('User already exists');
+  async initialize() {
+    try {
+      const defaultEmail = 'mobile@uc.com';
+      const existingUser = await AsyncStorage.getItem(defaultEmail);
+      if (!existingUser) {
+        const defaultUser: User = {
+          email: defaultEmail,
+          password: 'hello123!',
+        };
+        await AsyncStorage.setItem(defaultEmail, JSON.stringify(defaultUser));
+      }
+    } catch (error) {
+      console.error('Failed to initialize storage:', error);
     }
-    await storage.setItem(user.email, JSON.stringify(user));
-  } catch (error) {
-    console.error('Failed to add user to storage:', error);
-    throw error;
   }
-};
 
-export const getUsers = async (): Promise<User[]> => {
-  try {
-    const storage = await getStorage();
-    const keys = await storage.getAllKeys();
-    const userKeys = keys.filter((key: string) => key.includes('@') && key.includes('.'));
+  async addUser(user: User) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(user.email)) {
+      throw new Error('Invalid email format');
+    }
 
-    const userPromises = userKeys.map((key: string) => storage.getItem(key));
-    const userJsonList = await Promise.all(userPromises);
-
-    return userJsonList
-      .map((value) => (value ? JSON.parse(value) : null))
-      .filter((user): user is User => user !== null);
-  } catch (error) {
-    console.error('Failed to fetch users from storage:', error);
-    return [];
+    try {
+      const existingUser = await AsyncStorage.getItem(user.email);
+      if (existingUser) {
+        throw new Error('User already exists');
+      }
+      await AsyncStorage.setItem(user.email, JSON.stringify(user));
+    } catch (error) {
+      console.error('Failed to add user to storage:', error);
+      throw error;
+    }
   }
-};
 
-export const getUserByEmail = async (email: string): Promise<User | null> => {
-  try {
-    const storage = await getStorage();
-    const storedUserJson = await storage.getItem(email);
-    return storedUserJson ? (JSON.parse(storedUserJson) as User) : null;
-  } catch (error) {
-    console.error('Failed to fetch user from storage:', error);
-    throw error;
-  }
-};
+  async getUsers(): Promise<User[]> {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const userKeys = keys.filter((key: string) => key.includes('@') && key.includes('.'));
 
-export const clearStorage = async () => {
-  try {
-    const storage = await getStorage();
-    await storage.clear();
-  } catch (error) {
-    console.error('Failed to clear storage:', error);
+      const userPromises = userKeys.map((key: string) => AsyncStorage.getItem(key));
+      const userJsonList = await Promise.all(userPromises);
+
+      return userJsonList
+        .map((value) => (value ? JSON.parse(value) : null))
+        .filter((user): user is User => user !== null);
+    } catch (error) {
+      console.error('Failed to fetch users from storage:', error);
+      return [];
+    }
   }
-};
+  
+  async getUserByEmail(email: string): Promise<User | null> {
+    try {
+      const userData = await AsyncStorage.getItem(email);
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error(`Failed to fetch user with email ${email}:`, error);
+      return null;
+    }
+  }
+
+  async clear() {
+    try {
+      await AsyncStorage.clear();
+    } catch (error) {
+      console.error('Failed to clear storage:', error);
+    }
+  }
+}
+
+const storageInstance = Storage.getInstance();
+
+export const initializeStorage = () => storageInstance.initialize();
+export const addUser = (user: User) => storageInstance.addUser(user);
+export const getUserByEmail = (email: string) => storageInstance.getUserByEmail(email);
+export const getUsers = () => storageInstance.getUsers();
+export const clearStorage = () => storageInstance.clear();
+export const userStorage = storageInstance;

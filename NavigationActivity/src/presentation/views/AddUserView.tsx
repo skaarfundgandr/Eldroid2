@@ -52,6 +52,7 @@ export function AddUserView() {
         <TextInput
           className="mb-4 h-16 w-full rounded border-2 border-black p-4"
           placeholder="Enter Password"
+          autoCapitalize="none"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -59,6 +60,7 @@ export function AddUserView() {
         <Text className="mb-2 text-xl font-bold">Confirm Password</Text>
         <TextInput
           className="mb-6 h-16 w-full rounded border-2 border-black p-4"
+          autoCapitalize="none"
           placeholder="Confirm Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -67,7 +69,7 @@ export function AddUserView() {
         <Pressable
           className="h-20 w-full items-center justify-center rounded bg-blue-400 shadow-md active:bg-blue-500"
           onPress={handleAddUserClicked}>
-          <Text className="text-xl font-bold text-white">+ Add User</Text>
+          <Text className="text-xl font-bold text-white select-none">Save</Text>
         </Pressable>
       </View>
     </View>
